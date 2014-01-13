@@ -74,7 +74,7 @@
         if(valid){
             $.when(get_results(query, agg)).then(function(resp){
                 $('#map').spin(false);
-                var aggTpl = new EJS({url: '/js/templates/responseTemplate.ejs'})
+                var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
                 $('#response').html(aggTpl.render({'datasets': resp.objects}));
             }).fail(function(resp){
                 $('#map').spin(false);
@@ -83,7 +83,7 @@
                     header: 'Woops!',
                     body: resp['responseJSON']['meta']['message'],
                 }
-                var errortpl = new EJS({url: '/js/templates/modalTemplate.ejs'})
+                var errortpl = new EJS({url: 'js/templates/modalTemplate.ejs'})
                 $('#errorModal').html(errortpl.render(error));
                 $('#errorModal').modal();
             });
@@ -93,7 +93,7 @@
                 header: 'Woops!',
                 body: message,
             }
-            var errortpl = new EJS({url: '/js/templates/modalTemplate.ejs'})
+            var errortpl = new EJS({url: 'js/templates/modalTemplate.ejs'})
             $('#errorModal').html(errortpl.render(error));
             $('#errorModal').modal();
         }
