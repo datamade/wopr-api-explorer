@@ -6,7 +6,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>W.O.P.R.</title>
+    <title>W.O.P.R. Map Prototype</title>
 
     <!-- Bootstrap core CSS -->
     <link href="css/bootstrap.min.css" rel="stylesheet">
@@ -26,31 +26,53 @@
 
   <body>
 
-    <div class="row">
-        <div class="col-md-6">
-            <div class="row filters">
-                <div class="col-md-12">
-                    <h3>Build a query</h3>
+    <!-- Static navbar -->
+        <div class="navbar navbar-default navbar-static-top" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="/">W.O.P.R. Map Prototype</a>
+            </div>
+            <div class="navbar-collapse collapse pull-right">
+              <ul class="nav navbar-nav">
+                <li class="active"><a href="#">Home</a></li>
+              </ul>
+            </div><!--/.nav-collapse -->
+          </div>
+        </div>
+
+    <div class="col-md-12">
+        <div class="row">
+            <div class="col-md-6">
+                <div class='well'>
+                    <h4>1. Draw an area</h4>
+                    <div id="map" class="col-md-12 half-height"></div>
+
+                    <br />
+                    <h4>2. Select date range and aggregation</h4>
                     <div id="filters">
                         <form role="form">
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="form-group">
-                                        <label for="start-date-filter">Start Date: </label>
+                                        <label for="start-date-filter">Start Date</label>
                                         <input id="start-date-filter" class="date-filter form-control" type="text"/>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="form-group">
-                                        <label for="end-date-filter">End Date: </label>
+                                        <label for="end-date-filter">End Date</label>
                                         <input id="end-date-filter" class="date-filter form-control" type="text"/>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                   <div class="form-group">
-                                        <label for="time-agg-filter">Time aggregate: </label>
+                                        <label for="time-agg-filter">Aggregate by</label>
                                         <select id="time-agg-filter">
                                             <option value="minute">Minute</option>
                                             <option value="hour">Hour</option>
@@ -63,26 +85,28 @@
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                            </div>
+                            <div class="row">
+                                
+                                <div class="col-md-12">
                                      <button type="button" id="submit-query" class="btn btn-success">Submit</button>
+                                     <a href='#' id="reset" class="btn btn-default">Reset</a>
                                 </div>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-2 col-md-offset-10">
-                </div>
-            </div>
-            <div class="row">
-                <div id="map" class="col-md-12 half-height"></div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <h3>Here is where the response goes</h3>
-            <p>We can also show instructions for how to use this junk</p>
-            <div id="response">
+            <div class="col-md-6" id="response">
+                <h3>About W.O.P.R. Map Prototype</h3>
+                <p>This is a prototype for demonstrating geospatial and time aggregation across multiple Chicago open datasets.</p>
+
+                <h4>Datasets available</h4>
+
+                <ul>
+                    <li><a href='https://data.cityofchicago.org/Public-Safety/Crimes-2001-to-present/ijzp-q8t2'>Crimes - 2001 to present</a></li>
+                    <li><a href='https://data.cityofchicago.org/Community-Economic-Development/Business-Licenses/r5kz-chrr'>Business licenses</a></li>
+                </ul>
             </div>
         </div>
     </div>

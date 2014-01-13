@@ -10,7 +10,7 @@
         var then = moment().subtract('d', 180)
         $('#start-date-filter').attr('placeholder', then.format('MM-DD-YYYY'));
         $('#end-date-filter').attr('placeholder', moment().format('MM-DD-YYYY'));
-        map = L.map('map').setView([41.880517,-87.644061], 13);
+        map = L.map('map').setView([41.880517,-87.644061], 11);
         L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png', {
           attribution: 'Mapbox <a href="http://mapbox.com/about/maps" target="_blank">Terms &amp; Feedback</a>',
           key: 'BC9A493B41014CAABB98F0471D759707',
@@ -40,10 +40,14 @@
             console.log('OK heres where we show and hide info about the datasets')
         });
         $('#submit-query').on('click', submit_form);
+
+        $('#reset').click(function() {
+            location.reload();
+        });
     });
 
     function submit_form(e){
-        $('#map').spin('large');
+        $('#response').spin('large');
         var message = null;
         var query = {};
         var start = $('#start-date-filter').val();
@@ -73,21 +77,21 @@
         var agg = $('#time-agg-filter').val();
         if(valid){
             $.when(get_results(query, agg)).then(function(resp){
-                $('#map').spin(false);
-                $.each(resp.objects, function(i, obj){
-                    var name = obj.objects[0].dataset_name;
-                    $('#response').append('<div id="' + name + '"></div>');
-                    var start_date = obj.objects[0].group
-                    var data = [];
-                    $.each(obj.objects, function(i, o){
-                        data.push(o.count);
-                    })
-                    ChartHelper.create(name, obj.dataset_name, 'sourceTxt', 'yaxisLabel', data, obj.temporal_aggregate, 'count');
-                })
-                //var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
-                //$('#response').html(aggTpl.render({'datasets': resp.objects}));
+                $('#response').spin(false);
+                // $.each(resp.objects, function(i, obj){
+                //     var name = obj.objects[0].dataset_name;
+                //     $('#response').append('<div id="' + name + '"></div>');
+                //     var start_date = obj.objects[0].group
+                //     var data = [];
+                //     $.each(obj.objects, function(i, o){
+                //         data.push(o.count);
+                //     })
+                //     ChartHelper.create(name, obj.dataset_name, 'sourceTxt', 'yaxisLabel', data, obj.temporal_aggregate, 'count');
+                // })
+                var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
+                $('#response').html(aggTpl.render({'datasets': resp.objects}));
             }).fail(function(resp){
-                $('#map').spin(false);
+                $('#response').spin(false);
                 console.log(resp);
                 var error = {
                     header: 'Woops!',
@@ -98,7 +102,7 @@
                 $('#errorModal').modal();
             });
         } else {
-            $('#map').spin(false);
+            $('#response').spin(false);
             var error = {
                 header: 'Woops!',
                 body: message,
