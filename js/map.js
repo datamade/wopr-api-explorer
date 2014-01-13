@@ -74,8 +74,18 @@
         if(valid){
             $.when(get_results(query, agg)).then(function(resp){
                 $('#map').spin(false);
-                var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
-                $('#response').html(aggTpl.render({'datasets': resp.objects}));
+                $.each(resp.objects, function(i, obj){
+                    var name = obj.objects[0].dataset_name;
+                    $('#response').append('<div id="' + name + '"></div>');
+                    var start_date = obj.objects[0].group
+                    var data = [];
+                    $.each(obj.objects, function(i, o){
+                        data.push(o.count);
+                    })
+                    ChartHelper.create(name, obj.dataset_name, 'sourceTxt', 'yaxisLabel', data, obj.temporal_aggregate, 'count');
+                })
+                //var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
+                //$('#response').html(aggTpl.render({'datasets': resp.objects}));
             }).fail(function(resp){
                 $('#map').spin(false);
                 console.log(resp);
