@@ -187,3 +187,9 @@ body {
 .navbar {
   margin-bottom: 10px;
 }
+
+.chart {
+  min-width: 200px; 
+  height: 300px; 
+  margin: 0 auto;
+}

@@ -3,9 +3,9 @@
     var map;
     var endpoint = 'http://wopr.datamade.us'
     $(document).ready(function(){
-        resize_junk();
+        resize_page();
         window.onresize = function(event){
-            resize_junk();
+            resize_page();
         }
         var then = moment().subtract('d', 180)
         $('#start-date-filter').attr('placeholder', then.format('MM-DD-YYYY'));
@@ -78,18 +78,20 @@
         if(valid){
             $.when(get_results(query, agg)).then(function(resp){
                 $('#response').spin(false);
-                // $.each(resp.objects, function(i, obj){
-                //     var name = obj.objects[0].dataset_name;
-                //     $('#response').append('<div id="' + name + '"></div>');
-                //     var start_date = obj.objects[0].group
-                //     var data = [];
-                //     $.each(obj.objects, function(i, o){
-                //         data.push(o.count);
-                //     })
-                //     ChartHelper.create(name, obj.dataset_name, 'sourceTxt', 'yaxisLabel', data, obj.temporal_aggregate, 'count');
-                // })
-                var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
-                $('#response').html(aggTpl.render({'datasets': resp.objects}));
+                $('#response').html('');
+                $.each(resp.objects, function(i, obj){
+                    //console.log(obj);
+                    var el = obj.objects[0].dataset_name;
+                    $('#response').append('<div id="' + el + '_' + i + '" class="chart"></div>');
+                    var data = [];
+                    $.each(obj.objects, function(i, o){
+                        data.push([moment(o.group).unix()*1000, o.count]);
+                    })
+                    //console.log(data);
+                    ChartHelper.create(el, obj.dataset_name, 'City of Chicago', agg, data, i);
+                })
+                // var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
+                // $('#response').html(aggTpl.render({'datasets': resp.objects}));
             }).fail(function(resp){
                 $('#response').spin(false);
                 console.log(resp);
@@ -133,7 +135,7 @@
         $('#response').data(layer.toGeoJSON());
         drawnItems.addLayer(layer);
     }
-    function resize_junk(){
+    function resize_page(){
         $('.half-height').height((window.innerHeight  / 2) - 40);
     }
 
