@@ -115,6 +115,7 @@
     }
 
     function draw_create(e){
+        drawnItems.clearLayers();
         edit_create(e.layer, e.target);
     }
 
