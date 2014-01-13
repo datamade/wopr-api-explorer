@@ -18,7 +18,7 @@
         <tbody>
         <% $.each(dataset.objects, function(i, object){ %> 
             <tr>
-                <td><%= moment(object.group).format(formats[dataset.temporal_aggregate]) %></td>
+                <td><%= moment(object.group).utc().format(formats[dataset.temporal_aggregate]) %></td>
                 <td><%= object.count %></td>
             </tr>
         <% }) %>
