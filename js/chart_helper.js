@@ -1,7 +1,5 @@
 var ChartHelper = {};
 ChartHelper.create = function(el, title, source, time_agg, data, iteration) {
-  console.log(iteration);
-  console.log(ChartHelper.colors[iteration]);
   
   return new Highcharts.Chart({
       chart: {

@@ -70,7 +70,7 @@
         }
         query['obs_date__le'] = end;
         query['obs_date__ge'] = start;
-        var shape = $('#response').data();
+        var shape = $('#map').data();
         if (typeof shape === 'object'){
             query['geom__within'] = JSON.stringify(query['geom__within']);
         }
