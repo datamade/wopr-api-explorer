@@ -1,13 +1,15 @@
 (function(){
     var drawnItems = new L.FeatureGroup();
     var map;
-    var geojson = new L.LayerGroup();
     var endpoint = 'http://wopr.datamade.us'
     $(document).ready(function(){
         resize_junk();
         window.onresize = function(event){
             resize_junk();
         }
+        var then = moment().subtract('d', 180)
+        $('#start-date-filter').attr('placeholder', then.format('MM-DD-YYYY'));
+        $('#end-date-filter').attr('placeholder', moment().format('MM-DD-YYYY'));
         map = L.map('map').setView([41.880517,-87.644061], 13);
         L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png', {
           attribution: 'Mapbox <a href="http://mapbox.com/about/maps" target="_blank">Terms &amp; Feedback</a>',
@@ -36,32 +38,17 @@
         });
         $('#dataset').on('change', function(){
             console.log('OK heres where we show and hide info about the datasets')
-        })
+        });
+        $('#submit-query').on('click', submit_form);
     });
 
-    function draw_create(e){
-        edit_create(e.layer, e.target);
-    }
-
-    function draw_edit(e){
-        var layers = e.layers;
-        geojson.clearLayers();
-        layers.eachLayer(function(layer){
-            edit_create(layer, e.target);
-        });
-    }
-
-    function draw_delete(e){
-        geojson.clearLayers();
-    }
-
-    function edit_create(layer, map){
+    function submit_form(e){
         $('#map').spin('large');
+        var message = null;
         var query = {};
-        query['geom__within'] = JSON.stringify(layer.toGeoJSON());
         var start = $('#start-date-filter').val();
         var end = $('#end-date-filter').val();
-        start = moment(start)
+        start = moment(start);
         if (!start){
             start = moment().subtract('days', 180);
         }
@@ -69,21 +56,21 @@
         if(!end){
             end = moment();
         }
-        var valid = false;
+        var valid = true;
         if (start.isValid() && end.isValid()){
             start = start.startOf('day').format('YYYY/MM/DD');
             end = end.endOf('day').format('YYYY/MM/DD');
-            valid = true;
+        } else {
+            valid = false;
+            message = 'Your dates are not entered correctly';
         }
-        var agg = $('#time-agg-filter').val();
         query['obs_date__le'] = end;
         query['obs_date__ge'] = start;
-        var marker_opts = {
-            radius: 10,
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.6
-        };
+        var shape = $('#response').data();
+        if (typeof shape === 'object'){
+            query['geom__within'] = JSON.stringify(query['geom__within']);
+        }
+        var agg = $('#time-agg-filter').val();
         if(valid){
             $.when(get_results(query, agg)).then(function(resp){
                 $('#map').spin(false);
@@ -99,31 +86,41 @@
                 var errortpl = new EJS({url: '/js/templates/modalTemplate.ejs'})
                 $('#errorModal').html(errortpl.render(error));
                 $('#errorModal').modal();
-            })
+            });
         } else {
             $('#map').spin(false);
-            $('#date-error').reveal();
+            var error = {
+                header: 'Woops!',
+                body: message,
+            }
+            var errortpl = new EJS({url: '/js/templates/modalTemplate.ejs'})
+            $('#errorModal').html(errortpl.render(error));
+            $('#errorModal').modal();
         }
-        drawnItems.addLayer(layer);
     }
-    function bind_popup(feature, layer){
-        var data_template = new EJS({url: '/js/templates/dataTemplate.ejs'});
-        var props = feature.properties;
-        var pop_content = data_template.render({props:props});
-        layer.bindPopup(pop_content, {
-            closeButton: true,
-            minWidth: 320
-        })
+
+    function draw_create(e){
+        edit_create(e.layer, e.target);
+    }
+
+    function draw_edit(e){
+        var layers = e.layers;
+        drawnItems.clearLayers();
+        layers.eachLayer(function(layer){
+            edit_create(layer, e.target);
+        });
+    }
+
+    function draw_delete(e){
+        drawnItems.clearLayers();
+    }
+
+    function edit_create(layer, map){
+        $('#response').data(layer.toGeoJSON());
+        drawnItems.addLayer(layer);
     }
     function resize_junk(){
         $('.half-height').height((window.innerHeight  / 2) - 40);
-    }
-
-    function get_datasets(){
-        return $.ajax({
-            url: '/api/',
-            dataType: 'json'
-        })
     }
 
     function get_results(query, agg){
