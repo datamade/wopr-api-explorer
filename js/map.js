@@ -1,6 +1,7 @@
 (function(){
     var drawnItems = new L.FeatureGroup();
     var map;
+    var geojson = null;
     var endpoint = 'http://wopr.datamade.us'
     $(document).ready(function(){
         resize_page();
@@ -69,11 +70,8 @@
         }
         query['obs_date__le'] = end;
         query['obs_date__ge'] = start;
-        var shape = $('#response').data();
-        if (typeof shape === 'object'){
-            query['geom__within'] = JSON.stringify(shape);
-        } else {
-            query['geom__within'] = shape;
+        if (geojson){
+            query['geom__within'] = JSON.stringify(geojson);
         }
         var agg = $('#time-agg-filter').val();
         if(valid){
@@ -133,7 +131,7 @@
     }
 
     function edit_create(layer, map){
-        $('#response').data(layer.toGeoJSON());
+        geojson = layer.toGeoJSON();
         drawnItems.addLayer(layer);
     }
     function resize_page(){
