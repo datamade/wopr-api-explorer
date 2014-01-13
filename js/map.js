@@ -40,7 +40,6 @@
             console.log('OK heres where we show and hide info about the datasets')
         });
         $('#submit-query').on('click', submit_form);
-
         $('#reset').click(function() {
             location.reload();
         });
@@ -72,7 +71,9 @@
         query['obs_date__ge'] = start;
         var shape = $('#map').data();
         if (typeof shape === 'object'){
-            query['geom__within'] = JSON.stringify(query['geom__within']);
+            query['geom__within'] = JSON.stringify(shape);
+        } else {
+            query['geom__within'] = shape;
         }
         var agg = $('#time-agg-filter').val();
         if(valid){
