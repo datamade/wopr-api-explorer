@@ -30,6 +30,7 @@
         });
         map.addControl(drawControl);
         map.on('draw:created', draw_create);
+        map.on('draw:drawstart', draw_delete);
         map.on('draw:edited', draw_edit);
         map.on('draw:deleted', draw_delete);
         $('.date-filter').datepicker({
