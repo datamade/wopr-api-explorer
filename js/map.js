@@ -86,8 +86,11 @@
                     var el = obj.objects[0].dataset_name;
                     var chart_id = el + '_' + i;
                     var item = '<div id="' + chart_id + '" class="chart"></div>';
-                    item += '<button type="button" class="btn btn-success center-block csv-download" id="' + el + '-download">';
-                    item += 'Download in CSV format</button><hr />';
+                    item += '<div class="btn-group"><button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown">Download ';
+                    item += '<span class="caret"></span></button><ul class="dropdown-menu" role="menu">';
+                    item += '<li><a id="' + el + '-csv-download" href="javascript://" class="data-download">CSV</a></li>';
+                    item += '<li><a id="' + el + '-json-download" href="javascript://" class="data-download">JSON</a></li>';
+                    item += '</ul></div>';
                     $('#response').append(item);
                     var data = [];
                     $.each(obj.objects, function(i, o){
@@ -96,18 +99,11 @@
                     //console.log(data);
                     ChartHelper.create(el, obj.dataset_name, 'City of Chicago', agg, data, i);
                 });
-                $('.csv-download').on('click', function(){
-                    var set = $(this).attr('id').split('-')[0];
-                    var data = [];
-                    $.each(results, function(i, result){
-                        $.each(result.objects, function(i, res){
-                            if(res.dataset_name == set){
-                                data.push(res);
-                            }
-                        });
-                    });
-                    var csv = convert_to_csv(data);
-                    console.log(csv);
+                $('.data-download').on('click', function(){
+                    var dataset = $(this).attr('id').split('-')[0];
+                    var datatype = $(this).attr('id').split('-')[1];
+                    var url = endpoint + '/api/' + agg + '/?' + $.param(query) + '&dataset_name=' + dataset + '&datatype=' + datatype;
+                    window.open(url, '_blank');
                 });
                 // var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
                 // $('#response').html(aggTpl.render({'datasets': resp.objects}));
@@ -132,25 +128,6 @@
             $('#errorModal').html(errortpl.render(error));
             $('#errorModal').modal();
         }
-    }
-
-    function convert_to_csv(json){
-        var str = '';
-        $.each(json, function(idx, js){
-            var line = '';
-            $.each(js, function(i, j){
-                if (line != ''){
-                    line += ','
-                }
-                if(idx == 0){
-                    line += i
-                } else {
-                    line += json[idx][i];
-                }
-            });
-            str += line + '\r\n';
-        });
-        return str
     }
 
     function draw_create(e){
