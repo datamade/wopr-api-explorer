@@ -2,6 +2,7 @@
     var drawnItems = new L.FeatureGroup();
     var map;
     var geojson = null;
+    var results = null;
     var endpoint = 'http://wopr.datamade.us'
     $(document).ready(function(){
         resize_page();
@@ -79,17 +80,35 @@
             $.when(get_results(query, agg)).then(function(resp){
                 $('#response').spin(false);
                 $('#response').html('');
-                $.each(resp.objects, function(i, obj){
+                results = resp.objects;
+                $.each(results, function(i, obj){
                     //console.log(obj);
                     var el = obj.objects[0].dataset_name;
-                    $('#response').append('<div id="' + el + '_' + i + '" class="chart"></div>');
+                    var chart_id = el + '_' + i;
+                    var item = '<div id="' + chart_id + '" class="chart"></div>';
+                    item += '<button type="button" class="btn btn-success center-block csv-download" id="' + el + '-download">';
+                    item += 'Download in CSV format</button><hr />';
+                    $('#response').append(item);
                     var data = [];
                     $.each(obj.objects, function(i, o){
                         data.push([moment(o.group).unix()*1000, o.count]);
                     })
                     //console.log(data);
                     ChartHelper.create(el, obj.dataset_name, 'City of Chicago', agg, data, i);
-                })
+                });
+                $('.csv-download').on('click', function(){
+                    var set = $(this).attr('id').split('-')[0];
+                    var data = [];
+                    $.each(results, function(i, result){
+                        $.each(result.objects, function(i, res){
+                            if(res.dataset_name == set){
+                                data.push(res);
+                            }
+                        });
+                    });
+                    var csv = convert_to_csv(data);
+                    console.log(csv);
+                });
                 // var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
                 // $('#response').html(aggTpl.render({'datasets': resp.objects}));
             }).fail(function(resp){
@@ -113,6 +132,25 @@
             $('#errorModal').html(errortpl.render(error));
             $('#errorModal').modal();
         }
+    }
+
+    function convert_to_csv(json){
+        var str = '';
+        $.each(json, function(idx, js){
+            var line = '';
+            $.each(js, function(i, j){
+                if (line != ''){
+                    line += ','
+                }
+                if(idx == 0){
+                    line += i
+                } else {
+                    line += json[idx][i];
+                }
+            });
+            str += line + '\r\n';
+        });
+        return str
     }
 
     function draw_create(e){
