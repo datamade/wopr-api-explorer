@@ -3,7 +3,8 @@
     var map;
     var geojson = null;
     var results = null;
-    var endpoint = 'http://wopr.datamade.us'
+    var endpoint = 'http://wopr.datamade.us';
+    var master_query;
     $(document).ready(function(){
         resize_page();
         window.onresize = function(event){
@@ -103,10 +104,10 @@
         if (geojson){
             query['geom__within'] = JSON.stringify(geojson);
         }
-        var agg = $('#time-agg-filter').val();
+        query['agg'] = $('#time-agg-filter').val();
         if(valid){
-            window.location.hash = $.param(query) + '&agg=' + agg;
-            run_query(query, agg);
+            window.location.hash = $.param(query);
+            run_query();
         } else {
             $('#response').spin(false);
             var error = {
@@ -119,8 +120,8 @@
         }
     }
 
-    function run_query(query, agg){
-        $.when(get_results(query, agg)).then(function(resp){
+    function run_query(){
+        $.when(get_results()).then(function(resp){
             $('#response').spin(false);
             $('#response').html('');
             results = resp.objects;
@@ -138,7 +139,7 @@
                 $.each(obj.objects, function(i, o){
                     data.push([moment(o.group).unix()*1000, o.count]);
                 })
-                //console.log(data);
+                var agg = $('#time-agg-filter').val();
                 ChartHelper.create(el, obj.dataset_name, 'City of Chicago', agg, data, i);
             });
             $('.data-download').on('click', function(){
@@ -147,6 +148,16 @@
                 var url = endpoint + '/api/master/?' + $.param(query) + '&dataset_name=' + dataset + '&datatype=' + datatype + '&agg=' + agg;
                 window.open(url, '_blank');
             });
+            $('.explore').on('click', function(){
+                var dataset = $(this).attr('id').split('-')[0];
+                if(typeof master_query === 'undefined'){
+                    window.location.hash += '&dataset_name=' + dataset;
+                    master_query = window.location.hash;
+                } else {
+                    console.log('master_query set');
+                }
+                run_query();
+            })
             // var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
             // $('#response').html(aggTpl.render({'datasets': resp.objects}));
         }).fail(function(resp){
@@ -187,8 +198,13 @@
         $('.half-height').height((window.innerHeight  / 2) - 40);
     }
 
-    function get_results(query, agg){
-        query['agg'] = agg;
+    function get_results(){
+        var query = {};
+        var agg = '';
+        var hash = parseParams(window.location.hash.replace('#',''));
+        $.each(hash, function(key, val){
+            query[key] = val;
+        });
         return $.ajax({
             url: endpoint + '/api/master/',
             dataType: 'json',
