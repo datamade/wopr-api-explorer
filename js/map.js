@@ -144,7 +144,7 @@
             $('.data-download').on('click', function(){
                 var dataset = $(this).attr('id').split('-')[0];
                 var datatype = $(this).attr('id').split('-')[1];
-                var url = endpoint + '/api/' + agg + '/?' + $.param(query) + '&dataset_name=' + dataset + '&datatype=' + datatype;
+                var url = endpoint + '/api/master/?' + $.param(query) + '&dataset_name=' + dataset + '&datatype=' + datatype + '&agg=' + agg;
                 window.open(url, '_blank');
             });
             // var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
