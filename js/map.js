@@ -4,7 +4,81 @@
     var geojson = null;
     var results = null;
     var endpoint = 'http://wopr.datamade.us';
-    var master_query;
+    // TODO: ResponseView should be a wrapper for individual ChartViews and a
+    // ChartView + a DataDetailView once you drill down into a dataset
+    var ResponseView = Backbone.View.extend({
+        events: {
+            'click .data-download': 'fetchDownload',
+            'click .explore': 'exploreDataset'
+        },
+        render: function(){
+            var self = this;
+            this.query = this.attributes.query;
+            $.when(this.getResults()).then(function(resp){
+                self.$el.spin(false);
+                self.$el.html('');
+                results = resp.objects;
+                $.each(results, function(i, obj){
+                    var el = obj.objects[0].dataset_name;
+                    var chart_id = el + '_' + i;
+                    var item = {
+                        el: el,
+                        chart_id: chart_id,
+                        objects: obj
+                    }
+                    var chartTpl = new EJS({url: self.template});
+                    self.$el.append(chartTpl.render(item));
+                    var data = [];
+                    $.each(obj.objects, function(i, o){
+                        data.push([moment(o.group).unix()*1000, o.count]);
+                    });
+                    ChartHelper.create(el, obj.dataset_name, 'City of Chicago', agg, data, i);
+                });
+            }).fail(function(resp){
+                this.$el.spin(false);
+                var error = {
+                    header: 'Woops!',
+                    body: resp['responseJSON']['meta']['message'],
+                }
+                var errortpl = new EJS({url: 'js/templates/modalTemplate.ejs'})
+                $('#errorModal').html(errortpl.render(error));
+                $('#errorModal').modal();
+            });
+        },
+        fetchDownload: function(e){
+            var dataset = $(e.target).attr('id').split('-')[0];
+            var datatype = $(e.target).attr('id').split('-')[1];
+            var url = endpoint + '/api/master/?' + $.param(this.query) + '&dataset_name=' + dataset + '&datatype=' + datatype;
+            window.open(url, '_blank');
+        },
+        exploreDataset: function(){
+            var dataset = $(e.target).attr('id').split('-')[0];
+            console.log('exploreit');
+        },
+        getResults: function(){
+            var self = this;
+            return $.ajax({
+                url: endpoint + '/api/master/',
+                dataType: 'json',
+                data: self.query
+            });
+        },
+        parseParams: function(query){
+            var re = /([^&=]+)=?([^&]*)/g;
+            var decodeRE = /\+/g;  // Regex for replacing addition symbol with a space
+            var decode = function (str) {return decodeURIComponent( str.replace(decodeRE, " ") );};
+            var params = {}, e;
+            while ( e = re.exec(query) ) {
+                var k = decode( e[1] ), v = decode( e[2] );
+                if (k.substring(k.length - 2) === '[]') {
+                    k = k.substring(0, k.length - 2);
+                    (params[k] || (params[k] = [])).push(v);
+                }
+                else params[k] = v;
+            }
+            return params;
+        }
+    });
     $(document).ready(function(){
         resize_page();
         window.onresize = function(event){
@@ -44,37 +118,38 @@
         $('#reset').click(function() {
             location.reload();
         });
-        if (window.location.hash){
-            var query = {};
-            var agg = '';
-            var hash = parseParams(window.location.hash.replace('#',''));
-            $.each(hash, function(key, val){
-                if (key == 'agg'){
-                    agg = val
-                } else {
-                    query[key] = val;
-                }
-            });
-            run_query(query, agg);
-            if(query.geom__within !== 'undefined'){
-                geojson = $.parseJSON(query.geom__within);
-                var opts = {
-                    stroke: true,
-                    color: '#f06eaa',
-                    weight: 4,
-                    opacity: 0.5,
-                    fill: true,
-                    fillColor: '#f06eaa',
-                    fillOpacity: 0.2,
-                    clickable: true
-                }
-                var layer = L.geoJson(geojson, opts);
-                drawnItems.addLayer(layer);
-            }
-            $('#start-date-filter').val(query['obs_date__ge']);
-            $('#end-date-filter').val(query['obs_date__le']);
-            $('#time-agg-filter').val(agg);
-        }
+      //if (window.location.hash){
+      //    var query = {};
+      //    var agg = '';
+      //    var hash = parseParams(window.location.hash.replace('#',''));
+      //    $.each(hash, function(key, val){
+      //        if (key == 'agg'){
+      //            agg = val
+      //        } else {
+      //            query[key] = val;
+      //        }
+      //    });
+      //    // Render view
+      //    // run_query(query, agg);
+      //    if(query.geom__within !== 'undefined'){
+      //        geojson = $.parseJSON(query.geom__within);
+      //        var opts = {
+      //            stroke: true,
+      //            color: '#f06eaa',
+      //            weight: 4,
+      //            opacity: 0.5,
+      //            fill: true,
+      //            fillColor: '#f06eaa',
+      //            fillOpacity: 0.2,
+      //            clickable: true
+      //        }
+      //        var layer = L.geoJson(geojson, opts);
+      //        drawnItems.addLayer(layer);
+      //    }
+      //    $('#start-date-filter').val(query['obs_date__ge']);
+      //    $('#end-date-filter').val(query['obs_date__le']);
+      //    $('#time-agg-filter').val(agg);
+      //}
     });
 
     function submit_form(e){
@@ -106,8 +181,9 @@
         }
         query['agg'] = $('#time-agg-filter').val();
         if(valid){
-            window.location.hash = $.param(query);
-            run_query();
+            // run_query();
+            var resp = new ResponseView({el: '#response', attributes: {query: query}});
+            resp.render();
         } else {
             $('#response').spin(false);
             var error = {
@@ -118,59 +194,6 @@
             $('#errorModal').html(errortpl.render(error));
             $('#errorModal').modal();
         }
-    }
-
-    function run_query(){
-        $.when(get_results()).then(function(resp){
-            $('#response').spin(false);
-            $('#response').html('');
-            results = resp.objects;
-            $.each(results, function(i, obj){
-                //console.log(obj);
-                var el = obj.objects[0].dataset_name;
-                var chart_id = el + '_' + i;
-                var item = {
-                    el: el,
-                    chart_id: chart_id
-                }
-                var chartTpl = new EJS({url: 'js/templates/chartTemplate.ejs'});
-                $('#response').append(chartTpl.render(item));
-                var data = [];
-                $.each(obj.objects, function(i, o){
-                    data.push([moment(o.group).unix()*1000, o.count]);
-                })
-                var agg = $('#time-agg-filter').val();
-                ChartHelper.create(el, obj.dataset_name, 'City of Chicago', agg, data, i);
-            });
-            $('.data-download').on('click', function(){
-                var dataset = $(this).attr('id').split('-')[0];
-                var datatype = $(this).attr('id').split('-')[1];
-                var url = endpoint + '/api/master/?' + $.param(query) + '&dataset_name=' + dataset + '&datatype=' + datatype + '&agg=' + agg;
-                window.open(url, '_blank');
-            });
-            $('.explore').on('click', function(){
-                var dataset = $(this).attr('id').split('-')[0];
-                if(typeof master_query === 'undefined'){
-                    window.location.hash += '&dataset_name=' + dataset;
-                    master_query = window.location.hash;
-                } else {
-                    console.log('master_query set');
-                }
-                run_query();
-            })
-            // var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
-            // $('#response').html(aggTpl.render({'datasets': resp.objects}));
-        }).fail(function(resp){
-            $('#response').spin(false);
-            console.log(resp);
-            var error = {
-                header: 'Woops!',
-                body: resp['responseJSON']['meta']['message'],
-            }
-            var errortpl = new EJS({url: 'js/templates/modalTemplate.ejs'})
-            $('#errorModal').html(errortpl.render(error));
-            $('#errorModal').modal();
-        });
     }
 
     function draw_create(e){
@@ -198,32 +221,4 @@
         $('.half-height').height((window.innerHeight  / 2) - 40);
     }
 
-    function get_results(){
-        var query = {};
-        var agg = '';
-        var hash = parseParams(window.location.hash.replace('#',''));
-        $.each(hash, function(key, val){
-            query[key] = val;
-        });
-        return $.ajax({
-            url: endpoint + '/api/master/',
-            dataType: 'json',
-            data: query
-        });
-    }
-    function parseParams(query){
-        var re = /([^&=]+)=?([^&]*)/g;
-        var decodeRE = /\+/g;  // Regex for replacing addition symbol with a space
-        var decode = function (str) {return decodeURIComponent( str.replace(decodeRE, " ") );};
-        var params = {}, e;
-        while ( e = re.exec(query) ) {
-            var k = decode( e[1] ), v = decode( e[2] );
-            if (k.substring(k.length - 2) === '[]') {
-                k = k.substring(0, k.length - 2);
-                (params[k] || (params[k] = [])).push(v);
-            }
-            else params[k] = v;
-        }
-        return params;
-    }
 })()
