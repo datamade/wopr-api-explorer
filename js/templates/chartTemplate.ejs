@@ -1,0 +1,12 @@
+<div id="<%= chart_id %>" class="chart"></div>
+<div class="btn-group">
+    <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown">
+        Download
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu" role="menu">
+        <li><a id="<%= el %>-csv-download" href="javascript://" class="data-download">CSV</a></li>
+        <li><a id="<%= el %>-json-download" href="javascript://" class="data-download">JSON</a></li>
+    </ul>
+</div>
+<button type="button" class="btn btn-default explore" id="<%= el %>-explore">Explore this data</button>

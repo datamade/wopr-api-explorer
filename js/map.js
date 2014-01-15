@@ -39,13 +39,41 @@
             prevText: '',
             nextText: ''
         });
-        $('#dataset').on('change', function(){
-            console.log('OK heres where we show and hide info about the datasets')
-        });
         $('#submit-query').on('click', submit_form);
         $('#reset').click(function() {
             location.reload();
         });
+        if (window.location.hash){
+            var query = {};
+            var agg = '';
+            var hash = parseParams(window.location.hash.replace('#',''));
+            $.each(hash, function(key, val){
+                if (key == 'agg'){
+                    agg = val
+                } else {
+                    query[key] = val;
+                }
+            });
+            run_query(query, agg);
+            if(query.geom__within !== 'undefined'){
+                geojson = $.parseJSON(query.geom__within);
+                var opts = {
+                    stroke: true,
+                    color: '#f06eaa',
+                    weight: 4,
+                    opacity: 0.5,
+                    fill: true,
+                    fillColor: '#f06eaa',
+                    fillOpacity: 0.2,
+                    clickable: true
+                }
+                var layer = L.geoJson(geojson, opts);
+                drawnItems.addLayer(layer);
+            }
+            $('#start-date-filter').val(query['obs_date__ge']);
+            $('#end-date-filter').val(query['obs_date__le']);
+            $('#time-agg-filter').val(agg);
+        }
     });
 
     function submit_form(e){
@@ -77,47 +105,8 @@
         }
         var agg = $('#time-agg-filter').val();
         if(valid){
-            $.when(get_results(query, agg)).then(function(resp){
-                $('#response').spin(false);
-                $('#response').html('');
-                results = resp.objects;
-                $.each(results, function(i, obj){
-                    //console.log(obj);
-                    var el = obj.objects[0].dataset_name;
-                    var chart_id = el + '_' + i;
-                    var item = '<div id="' + chart_id + '" class="chart"></div>';
-                    item += '<div class="btn-group"><button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown">Download ';
-                    item += '<span class="caret"></span></button><ul class="dropdown-menu" role="menu">';
-                    item += '<li><a id="' + el + '-csv-download" href="javascript://" class="data-download">CSV</a></li>';
-                    item += '<li><a id="' + el + '-json-download" href="javascript://" class="data-download">JSON</a></li>';
-                    item += '</ul></div>';
-                    $('#response').append(item);
-                    var data = [];
-                    $.each(obj.objects, function(i, o){
-                        data.push([moment(o.group).unix()*1000, o.count]);
-                    })
-                    //console.log(data);
-                    ChartHelper.create(el, obj.dataset_name, 'City of Chicago', agg, data, i);
-                });
-                $('.data-download').on('click', function(){
-                    var dataset = $(this).attr('id').split('-')[0];
-                    var datatype = $(this).attr('id').split('-')[1];
-                    var url = endpoint + '/api/' + agg + '/?' + $.param(query) + '&dataset_name=' + dataset + '&datatype=' + datatype;
-                    window.open(url, '_blank');
-                });
-                // var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
-                // $('#response').html(aggTpl.render({'datasets': resp.objects}));
-            }).fail(function(resp){
-                $('#response').spin(false);
-                console.log(resp);
-                var error = {
-                    header: 'Woops!',
-                    body: resp['responseJSON']['meta']['message'],
-                }
-                var errortpl = new EJS({url: 'js/templates/modalTemplate.ejs'})
-                $('#errorModal').html(errortpl.render(error));
-                $('#errorModal').modal();
-            });
+            window.location.hash = $.param(query) + '&agg=' + agg;
+            run_query(query, agg);
         } else {
             $('#response').spin(false);
             var error = {
@@ -128,6 +117,49 @@
             $('#errorModal').html(errortpl.render(error));
             $('#errorModal').modal();
         }
+    }
+
+    function run_query(query, agg){
+        $.when(get_results(query, agg)).then(function(resp){
+            $('#response').spin(false);
+            $('#response').html('');
+            results = resp.objects;
+            $.each(results, function(i, obj){
+                //console.log(obj);
+                var el = obj.objects[0].dataset_name;
+                var chart_id = el + '_' + i;
+                var item = {
+                    el: el,
+                    chart_id: chart_id
+                }
+                var chartTpl = new EJS({url: 'js/templates/chartTemplate.ejs'});
+                $('#response').append(chartTpl.render(item));
+                var data = [];
+                $.each(obj.objects, function(i, o){
+                    data.push([moment(o.group).unix()*1000, o.count]);
+                })
+                //console.log(data);
+                ChartHelper.create(el, obj.dataset_name, 'City of Chicago', agg, data, i);
+            });
+            $('.data-download').on('click', function(){
+                var dataset = $(this).attr('id').split('-')[0];
+                var datatype = $(this).attr('id').split('-')[1];
+                var url = endpoint + '/api/' + agg + '/?' + $.param(query) + '&dataset_name=' + dataset + '&datatype=' + datatype;
+                window.open(url, '_blank');
+            });
+            // var aggTpl = new EJS({url: 'js/templates/responseTemplate.ejs'})
+            // $('#response').html(aggTpl.render({'datasets': resp.objects}));
+        }).fail(function(resp){
+            $('#response').spin(false);
+            console.log(resp);
+            var error = {
+                header: 'Woops!',
+                body: resp['responseJSON']['meta']['message'],
+            }
+            var errortpl = new EJS({url: 'js/templates/modalTemplate.ejs'})
+            $('#errorModal').html(errortpl.render(error));
+            $('#errorModal').modal();
+        });
     }
 
     function draw_create(e){
@@ -161,5 +193,20 @@
             dataType: 'json',
             data: query
         });
+    }
+    function parseParams(query){
+        var re = /([^&=]+)=?([^&]*)/g;
+        var decodeRE = /\+/g;  // Regex for replacing addition symbol with a space
+        var decode = function (str) {return decodeURIComponent( str.replace(decodeRE, " ") );};
+        var params = {}, e;
+        while ( e = re.exec(query) ) {
+            var k = decode( e[1] ), v = decode( e[2] );
+            if (k.substring(k.length - 2) === '[]') {
+                k = k.substring(0, k.length - 2);
+                (params[k] || (params[k] = [])).push(v);
+            }
+            else params[k] = v;
+        }
+        return params;
     }
 })()
