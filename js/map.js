@@ -188,8 +188,9 @@
     }
 
     function get_results(query, agg){
+        query['agg'] = agg;
         return $.ajax({
-            url: endpoint + '/api/' + agg + '/',
+            url: endpoint + '/api/master/',
             dataType: 'json',
             data: query
         });
