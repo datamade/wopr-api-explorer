@@ -69,10 +69,43 @@
             var refined = this.$el.find('textarea').val();
             this.attributes.parent.remove();
             var refined_query = parseParams(refined);
-            var query = $.extend(this.attributes.base_query, refined_query);
-            // TODO: Probably need a RefineView that loads the data from a different endpoint
-            // First, need to make sure the endpoint will work that way.
+            var query = {};
+            $.each(refined_query, function(key, value){
+                var k = 'detail-' + key;
+                query[k] = value
+            });
+            $.each(this.attributes.base_query, function(key, value){
+                var k = 'base-' + key;
+                query[k] = value;
+            });
+            var refine = new RefineView({
+                el: '#response',
+                attributes:{ query: query }
+            });
+            refine.render();
         },
+    });
+    var RefineView = Backbone.View.extend({
+        render: function(){
+            this.query = this.attributes.query;
+            var self = this;
+            $.when(this.getData()).then(
+                function(data){
+                    console.log(data)
+                    // render template
+                }
+            ).fail(function(resp){
+                new ErrorView({el: '#errorModal', model: resp});
+            });
+        },
+        getData: function(query){
+            var self = this;
+            return $.ajax({
+                url: endpoint + '/api/detail-aggregate/',
+                dataType: 'json',
+                data: self.query
+            });
+        }
     });
     var ResponseView = Backbone.View.extend({
         events: {
@@ -118,17 +151,17 @@
             });
         },
         fetchDownload: function(e){
-            this.query['dataset'] = $(e.target).attr('id').split('-')[0];
+            this.query['dataset_name'] = $(e.target).attr('id').split('-')[0];
             this.query['datatype'] = $(e.target).attr('id').split('-')[1];
             var url = endpoint + '/api/master/?' + $.param(this.query);
             window.open(url, '_blank');
         },
         exploreDataset: function(e){
             var self = this;
-            this.query['dataset'] = $(e.target).attr('id').split('-')[0];
+            this.query['dataset_name'] = $(e.target).attr('id').split('-')[0];
             this.query['datatype'] = 'json';
             $.each(this.charts, function(key,chart){
-                if (key != self.query.dataset){
+                if (key != self.query.dataset_name){
                     chart.remove();
                 }
             });
