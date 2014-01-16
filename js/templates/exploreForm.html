@@ -1,0 +1,29 @@
+<h3>Base Query Clauses</h3>
+<ul>
+<% $.each(query, function(field, value){ %>
+    <% if (field == 'agg'){ %>
+        <li><%= field %> = <%= value %></li>
+    <% } else { %>
+        <% var fn = field.split('__'); %>
+        <% var f = fn[0]; %>
+        <% var op = fn[1]; %>
+        <li><%= f %>
+        <% if (op == 'ge'){ %>
+            >= <%= value %></li>
+        <% } else if(op == 'le'){ %>
+            <= <%= value %></li>
+        <% } else if(f == 'geom'){ %>
+            within the shape you drew</li>
+        <% } else { %>
+            <%= op ? op : '=' %> <%= value %></li>
+        <% } %>
+    <% } %>
+<% }) %>
+</ul>
+<form class="refine-form" role="form">
+    <div class="form-group">
+        <label for="refine-query">Refine your query</label>
+        <textarea class="form-control"></textarea>
+    </div>
+    <button type="button" class="btn btn-info refine">Refine</button>
+</form>
