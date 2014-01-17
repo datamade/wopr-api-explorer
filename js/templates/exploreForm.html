@@ -1,4 +1,4 @@
-<h3>Base Query Clauses</h3>
+<h4>Base Query Clauses</h4>
 <ul>
 <% $.each(query, function(field, value){ %>
     <% if (field == 'agg'){ %>
@@ -20,6 +20,19 @@
     <% } %>
 <% }) %>
 </ul>
+<h4>Dataset Field List</h4>
+<div class="field-list">
+    <ul>
+    <% $.each(fields, function(i, field){ %>
+        <li>
+            <small>
+                <strong><%= field.field_name %></strong>
+                (<%= field.field_type %>)
+            </small>
+        </li>
+    <% }) %>
+    </ul>
+</div>
 <form class="refine-form" role="form">
     <div class="form-group">
         <label for="refine-query">Refine your query</label>

@@ -58,16 +58,25 @@
             'click .refine': 'refineQuery'
         },
         initialize: function(){
-            // Maybe call the /api/fields/<dataset>/ to get a list of fields
-            this.render();
+            var dataset = this.attributes.base_query['dataset_name']
+            var self = this;
+            $.when(this.getFields(dataset)).then(
+                function(fields){
+                    self.attributes.fields = fields;
+                    self.render();
+                }
+            )
         },
         render: function(){
-            this.$el.html(template_cache('exploreForm', {query: this.attributes.base_query}));
+            this.$el.html(template_cache('exploreForm', {
+                query: this.attributes.base_query,
+                fields: this.attributes.fields
+            }));
             return this;
         },
         refineQuery: function(e){
             var refined = this.$el.find('textarea').val();
-            this.attributes.parent.remove();
+            //this.attributes.parent.remove();
             var refined_query = parseParams(refined);
             var query = {};
             $.each(refined_query, function(key, value){
@@ -80,10 +89,16 @@
             });
             var refine = new RefineView({
                 el: '#response',
-                attributes:{ query: query }
+                attributes: { query: query }
             });
             refine.render();
         },
+        getFields: function(dataset){
+            return $.ajax({
+                url: endpoint + '/api/fields/' + dataset + '/',
+                dataType: 'json',
+            });
+        }
     });
     var RefineView = Backbone.View.extend({
         render: function(){
@@ -91,8 +106,30 @@
             var self = this;
             $.when(this.getData()).then(
                 function(data){
-                    console.log(data)
-                    // render template
+                    var el = self.query['base-dataset_name'];
+                    var chart_id = el + '_0';
+                    var item = {
+                        el: el,
+                        chart_id: chart_id,
+                        objects: data.objects
+                    }
+                    var chart = new ChartView({
+                        model: item,
+                        attributes: {
+                            agg: self.query['base-agg'],
+                            iteration: 0
+                        }
+                    });
+                    self.$el.append(chart.render().el);
+                    var objs = [];
+                    var count = 0
+                    $.each(data.objects, function(i,o){
+                        objs.push([moment(o.group).unix()*1000, o.count]);
+                        count = count + o.count
+                    });
+                    console.log(count);
+                    chart.addData(objs);
+                    self.chart = chart;
                 }
             ).fail(function(resp){
                 new ErrorView({el: '#errorModal', model: resp});

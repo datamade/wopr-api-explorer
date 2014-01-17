@@ -189,7 +189,11 @@ body {
 }
 
 .chart {
-  min-width: 200px; 
-  height: 300px; 
+  min-width: 200px;
+  height: 300px;
   margin: 0 auto;
+}
+.field-list {
+  height: 150px;
+  overflow: auto;
 }
