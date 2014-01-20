@@ -3,6 +3,7 @@
     var map;
     var geojson = null;
     var results = null;
+    var resp;
     var endpoint = 'http://wopr.datamade.us';
     // TODO: ResponseView should be a wrapper for individual ChartViews and a
     // ChartView + a DataDetailView once you drill down into a dataset
@@ -41,6 +42,9 @@
         }
     });
     var ChartView = Backbone.View.extend({
+        events: {
+            'click .data-download': 'fetchDownload',
+        },
         render: function(){
             this.$el.html(template_cache('chartTemplate', this.model));
             return this;
@@ -48,35 +52,42 @@
         addData: function(data){
             var el = this.model['el'];
             var name = this.model['objects']['dataset_name'];
-            var agg = this.attributes.agg
-            var iteration = this.attributes.iteration
+            var agg = this.model.query.agg;
+            var iteration = this.model.iteration;
             ChartHelper.create(el, name, 'City of Chicago', agg, data, iteration);
+        },
+        fetchDownload: function(e){
+            if ($(e.target).parent().parent().hasClass('detail')){
+                var path = 'detail';
+            } else {
+                var path = 'master';
+                this.model.query['dataset_name'] = $(e.target).attr('id').split('-')[0];
+                this.model.query['datatype'] = $(e.target).attr('id').split('-')[1];
+            }
+            var url = endpoint + '/api/' + path + '/?' + $.param(this.model.query);
+            window.open(url, '_blank');
         }
     });
     var ExploreView = Backbone.View.extend({
         events: {
             'click .refine': 'refineQuery'
         },
-        initialize: function(){
+        render: function(){
             var dataset = this.attributes.base_query['dataset_name']
             var self = this;
             $.when(this.getFields(dataset)).then(
                 function(fields){
-                    self.attributes.fields = fields;
-                    self.render();
+                    self.$el.html(template_cache('exploreForm', {
+                        query: self.attributes.base_query,
+                        fields: fields
+                    }));
+                    self.delegateEvents();
                 }
             )
-        },
-        render: function(){
-            this.$el.html(template_cache('exploreForm', {
-                query: this.attributes.base_query,
-                fields: this.attributes.fields
-            }));
             return this;
         },
         refineQuery: function(e){
             var refined = this.$el.find('textarea').val();
-            //this.attributes.parent.remove();
             var refined_query = parseParams(refined);
             var query = {};
             $.each(refined_query, function(key, value){
@@ -87,67 +98,72 @@
                 var k = 'base-' + key;
                 query[k] = value;
             });
-            var refine = new RefineView({
-                el: '#response',
-                attributes: { query: query }
+            var dataset_name = this.attributes.base_query['dataset_name'];
+            this.attributes.parent.charts[dataset_name].remove();
+            if (typeof this.refine !== 'undefined'){
+                this.refine.remove();
+            }
+            var self = this;
+            $.when(this.getData(query)).then(
+                function(data){
+                    self.refine = new RefineView({
+                        el: '#response',
+                        attributes: {
+                            data: data,
+                            query: query
+                        }
+                    });
+                    self.refine.render();
+                }
+            ).fail(function(resp){
+                new ErrorView({el: '#errorModal', model: resp});
             });
-            refine.render();
         },
         getFields: function(dataset){
             return $.ajax({
                 url: endpoint + '/api/fields/' + dataset + '/',
                 dataType: 'json',
             });
+        },
+        getData: function(query){
+            return $.ajax({
+                url: endpoint + '/api/detail-aggregate/',
+                dataType: 'json',
+                data: query
+            });
         }
     });
     var RefineView = Backbone.View.extend({
         render: function(){
-            this.query = this.attributes.query;
-            var self = this;
-            $.when(this.getData()).then(
-                function(data){
-                    var el = self.query['base-dataset_name'];
-                    var chart_id = el + '_0';
-                    var item = {
-                        el: el,
-                        chart_id: chart_id,
-                        objects: data.objects
-                    }
-                    var chart = new ChartView({
-                        model: item,
-                        attributes: {
-                            agg: self.query['base-agg'],
-                            iteration: 0
-                        }
-                    });
-                    self.$el.append(chart.render().el);
-                    var objs = [];
-                    var count = 0
-                    $.each(data.objects, function(i,o){
-                        objs.push([moment(o.group).unix()*1000, o.count]);
-                        count = count + o.count
-                    });
-                    console.log(count);
-                    chart.addData(objs);
-                    self.chart = chart;
-                }
-            ).fail(function(resp){
-                new ErrorView({el: '#errorModal', model: resp});
+            var data = this.attributes.data;
+            var el = this.attributes.query.dataset_name;
+            var item = {
+                el: el,
+                objects: data.objects,
+                query: this.attributes.query,
+                iteration: 0,
+                detail: true
+            }
+            var chart = new ChartView({
+                model: item
             });
-        },
-        getData: function(query){
-            var self = this;
-            return $.ajax({
-                url: endpoint + '/api/detail-aggregate/',
-                dataType: 'json',
-                data: self.query
+            this.$el.html(chart.render().el);
+            var objs = [];
+            $.each(data.objects, function(i,obj){
+                $.each(obj.items, function(j, o){
+                    objs.push([moment(o.group).unix()*1000, o.count]);
+                })
             });
+            chart.addData(objs);
+            this.chart = chart;
         }
     });
     var ResponseView = Backbone.View.extend({
         events: {
-            'click .data-download': 'fetchDownload',
             'click .explore': 'exploreDataset'
+        },
+        initialize: function(){
+            this.explore = new ExploreView({el: '#explore'});
         },
         render: function(){
             var self = this;
@@ -161,23 +177,20 @@
                 self.$el.spin(false);
                 results = resp.objects;
                 $.each(results, function(i, obj){
-                    var el = obj.objects[0].dataset_name;
-                    var chart_id = el + '_' + i;
+                    var el = obj.items[0].dataset_name;
                     var item = {
                         el: el,
-                        chart_id: chart_id,
-                        objects: obj
+                        objects: obj,
+                        iteration: i,
+                        query: self.query,
+                        detail: false
                     }
                     var chart = new ChartView({
-                        model: item,
-                        attributes: {
-                            agg: self.query['agg'],
-                            iteration: i
-                        }
+                        model: item
                     });
                     self.$el.append(chart.render().el);
                     var data = [];
-                    $.each(obj.objects, function(i, o){
+                    $.each(obj.items, function(i, o){
                         data.push([moment(o.group).unix()*1000, o.count]);
                     });
                     chart.addData(data);
@@ -186,12 +199,6 @@
             }).fail(function(resp){
                 new ErrorView({el: '#errorModal', model: resp});
             });
-        },
-        fetchDownload: function(e){
-            this.query['dataset_name'] = $(e.target).attr('id').split('-')[0];
-            this.query['datatype'] = $(e.target).attr('id').split('-')[1];
-            var url = endpoint + '/api/master/?' + $.param(this.query);
-            window.open(url, '_blank');
         },
         exploreDataset: function(e){
             var self = this;
@@ -202,13 +209,11 @@
                     chart.remove();
                 }
             });
-            this.explore = new ExploreView({
-                el: '#explore',
-                attributes: {
-                    base_query: this.query,
-                    parent: self
-                }
-            });
+            this.explore.attributes = {
+                base_query: this.attributes.query,
+                parent: this
+            }
+            this.$el.after(this.explore.render().el);
         },
         getResults: function(){
             var self = this;
@@ -235,6 +240,7 @@
         return params;
     }
     $(document).ready(function(){
+        resp = new ResponseView({el: '#response'});
         resize_page();
         window.onresize = function(event){
             resize_page();
@@ -273,38 +279,6 @@
         $('#reset').click(function() {
             location.reload();
         });
-      //if (window.location.hash){
-      //    var query = {};
-      //    var agg = '';
-      //    var hash = parseParams(window.location.hash.replace('#',''));
-      //    $.each(hash, function(key, val){
-      //        if (key == 'agg'){
-      //            agg = val
-      //        } else {
-      //            query[key] = val;
-      //        }
-      //    });
-      //    // Render view
-      //    // run_query(query, agg);
-      //    if(query.geom__within !== 'undefined'){
-      //        geojson = $.parseJSON(query.geom__within);
-      //        var opts = {
-      //            stroke: true,
-      //            color: '#f06eaa',
-      //            weight: 4,
-      //            opacity: 0.5,
-      //            fill: true,
-      //            fillColor: '#f06eaa',
-      //            fillOpacity: 0.2,
-      //            clickable: true
-      //        }
-      //        var layer = L.geoJson(geojson, opts);
-      //        drawnItems.addLayer(layer);
-      //    }
-      //    $('#start-date-filter').val(query['obs_date__ge']);
-      //    $('#end-date-filter').val(query['obs_date__le']);
-      //    $('#time-agg-filter').val(agg);
-      //}
     });
 
     function submit_form(e){
@@ -336,8 +310,9 @@
         }
         query['agg'] = $('#time-agg-filter').val();
         if(valid){
-            // run_query();
-            var resp = new ResponseView({el: '#response', attributes: {query: query}});
+            resp.undelegateEvents();
+            resp.delegateEvents();
+            resp.attributes = {query: query};
             resp.render();
         } else {
             $('#response').spin(false);
