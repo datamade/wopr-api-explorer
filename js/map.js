@@ -14,7 +14,7 @@
 
         if ( ! template_cache.tmpl_cache[tmpl_name] ) {
             var tmpl_dir = '/js/templates';
-            var tmpl_url = tmpl_dir + '/' + tmpl_name + '.html';
+            var tmpl_url = tmpl_dir + '/' + tmpl_name + '.html?2';
 
             var tmpl_string;
             $.ajax({
