@@ -39,6 +39,15 @@
             return this;
         }
     });
+    var QueryView = Backbone.View.extend({
+        initialize: function(){
+            this.render()
+        },
+        render: function(){
+            var query = this.attributes.query;
+            this.$el.html(template_cache('queryTemplate', {query: query}));
+        }
+    })
     var ChartView = Backbone.View.extend({
         events: {
             'click .data-download': 'fetchDownload',
@@ -76,9 +85,14 @@
             $.when(this.getFields(dataset)).then(
                 function(fields){
                     self.$el.html(template_cache('exploreForm', {
-                        query: self.attributes.base_query,
                         fields: fields
                     }));
+                    self.queryView = new QueryView({
+                        el: '#query',
+                        attributes: {
+                            query: self.attributes.base_query
+                        }
+                    });
                     self.delegateEvents();
                 }
             )
@@ -156,6 +170,12 @@
                 $.each(obj.items, function(j, o){
                     objs.push([moment(o.group).unix()*1000, o.count]);
                 })
+            });
+            this.queryView = new QueryView({
+                el: '#query',
+                attributes: {
+                    query: this.attributes.query
+                }
             });
             chart.addData(objs);
             this.chart = chart;
