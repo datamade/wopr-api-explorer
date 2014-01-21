@@ -5,8 +5,6 @@
     var results = null;
     var resp;
     var endpoint = 'http://wopr.datamade.us';
-    // TODO: ResponseView should be a wrapper for individual ChartViews and a
-    // ChartView + a DataDetailView once you drill down into a dataset
     function template_cache(tmpl_name, tmpl_data){
         if ( !template_cache.tmpl_cache ) {
             template_cache.tmpl_cache = {};
@@ -99,15 +97,20 @@
                 query[k] = value;
             });
             var dataset_name = this.attributes.base_query['dataset_name'];
-            this.attributes.parent.charts[dataset_name].remove();
+            this.attributes.parent.charts[dataset_name].undelegateEvents();
+            this.attributes.parent.charts[dataset_name].$el.empty();
             if (typeof this.refine !== 'undefined'){
-                this.refine.remove();
+                this.refine.undelegateEvents();
+                this.refine.$el.empty();
             }
             var self = this;
+            this.$el.spin('large');
             $.when(this.getData(query)).then(
                 function(data){
+                    self.$el.spin(false);
+                    query.dataset_name = self.attributes.base_query['dataset_name'];
                     self.refine = new RefineView({
-                        el: '#response',
+                        el: '#refine',
                         attributes: {
                             data: data,
                             query: query
@@ -139,7 +142,7 @@
             var el = this.attributes.query.dataset_name;
             var item = {
                 el: el,
-                objects: data.objects,
+                objects: data.objects[0],
                 query: this.attributes.query,
                 iteration: 0,
                 detail: true
@@ -173,6 +176,7 @@
             }
             this.$el.empty();
             this.charts = {};
+            this.$el.spin('large');
             $.when(this.getResults()).then(function(resp){
                 self.$el.spin(false);
                 results = resp.objects;
@@ -196,6 +200,7 @@
                     chart.addData(data);
                     self.charts[el] = chart;
                 });
+                $('#about').hide();
             }).fail(function(resp){
                 new ErrorView({el: '#errorModal', model: resp});
             });
@@ -246,8 +251,8 @@
             resize_page();
         }
         var then = moment().subtract('d', 180)
-        $('#start-date-filter').attr('placeholder', then.format('MM-DD-YYYY'));
-        $('#end-date-filter').attr('placeholder', moment().format('MM-DD-YYYY'));
+        $('#start-date-filter').attr('placeholder', then.format('MM/DD/YYYY'));
+        $('#end-date-filter').attr('placeholder', moment().format('MM/DD/YYYY'));
         map = L.map('map').setView([41.880517,-87.644061], 11);
         L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png', {
           attribution: 'Mapbox <a href="http://mapbox.com/about/maps" target="_blank">Terms &amp; Feedback</a>',
@@ -282,7 +287,6 @@
     });
 
     function submit_form(e){
-        $('#response').spin('large');
         var message = null;
         var query = {};
         var start = $('#start-date-filter').val();

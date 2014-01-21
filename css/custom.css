@@ -180,6 +180,10 @@ body {
 }
 
 /* Response */
+#response {
+  min-height: 50px;
+}
+
 .response-table {
     width: 100%;
 }
