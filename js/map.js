@@ -59,7 +59,13 @@
         addData: function(data){
             var el = this.model['el'];
             var name = this.model['objects']['dataset_name'];
+            if (typeof name === 'undefined'){
+                name = this.model['objects']['base-dataset_name'];
+            }
             var agg = this.model.query.agg;
+            if (typeof agg === 'undefined'){
+                var agg = this.model.query['base-agg'];
+            }
             var iteration = this.model.iteration;
             ChartHelper.create(el, name, 'City of Chicago', agg, data, iteration);
         },
@@ -110,7 +116,7 @@
                 var k = 'base-' + key;
                 query[k] = value;
             });
-            var dataset_name = this.attributes.base_query['dataset_name'];
+            var dataset_name = query['base-dataset_name'];
             this.attributes.parent.charts[dataset_name].undelegateEvents();
             this.attributes.parent.charts[dataset_name].$el.empty();
             if (typeof this.refine !== 'undefined'){
@@ -122,7 +128,6 @@
             $.when(this.getData(query)).then(
                 function(data){
                     self.$el.spin(false);
-                    query.dataset_name = self.attributes.base_query['dataset_name'];
                     self.refine = new RefineView({
                         el: '#refine',
                         attributes: {
