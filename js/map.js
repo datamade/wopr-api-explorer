@@ -101,15 +101,7 @@
         refineQuery: function(e){
             var refined = this.$el.find('textarea').val();
             var refined_query = parseParams(refined);
-            var query = {};
-            $.each(refined_query, function(key, value){
-                var k = 'detail-' + key;
-                query[k] = value
-            });
-            $.each(this.attributes.base_query, function(key, value){
-                var k = 'base-' + key;
-                query[k] = value;
-            });
+            var query = $.extend(refined_query, this.attributes.base_query);
             var dataset_name = this.attributes.base_query['dataset_name'];
             this.attributes.parent.charts[dataset_name].undelegateEvents();
             this.attributes.parent.charts[dataset_name].$el.empty();
