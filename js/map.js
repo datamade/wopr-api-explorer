@@ -64,12 +64,12 @@
             ChartHelper.create(el, name, 'City of Chicago', agg, data, iteration);
         },
         fetchDownload: function(e){
+            this.model.query['dataset_name'] = $(e.target).attr('id').split('-')[0];
+            this.model.query['datatype'] = $(e.target).attr('id').split('-')[1];
             if ($(e.target).parent().parent().hasClass('detail')){
                 var path = 'detail';
             } else {
                 var path = 'master';
-                this.model.query['dataset_name'] = $(e.target).attr('id').split('-')[0];
-                this.model.query['datatype'] = $(e.target).attr('id').split('-')[1];
             }
             var url = endpoint + '/api/' + path + '/?' + $.param(this.model.query);
             window.open(url, '_blank');
