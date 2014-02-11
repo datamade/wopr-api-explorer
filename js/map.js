@@ -85,7 +85,7 @@
             $.when(this.getFields(dataset)).then(
                 function(fields){
                     self.$el.html(template_cache('exploreForm', {
-                        fields: fields
+                        fields: fields.objects
                     }));
                     self.queryView = new QueryView({
                         el: '#query',
