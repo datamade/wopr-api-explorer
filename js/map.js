@@ -266,10 +266,8 @@
         $('#start-date-filter').attr('placeholder', then.format('MM/DD/YYYY'));
         $('#end-date-filter').attr('placeholder', moment().format('MM/DD/YYYY'));
         map = L.map('map').setView([41.880517,-87.644061], 11);
-        L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png', {
-          attribution: 'Mapbox <a href="http://mapbox.com/about/maps" target="_blank">Terms &amp; Feedback</a>',
-          key: 'BC9A493B41014CAABB98F0471D759707',
-          styleId: 22677
+        L.tileLayer('https://{s}.tiles.mapbox.com/v3/derekeder.hehblhbj/{z}/{x}/{y}.png', {
+          attribution: '<a href="http://www.mapbox.com/about/maps/" target="_blank">Terms &amp; Feedback</a>'
         }).addTo(map);
         map.addLayer(drawnItems);
         var drawControl = new L.Control.Draw({
