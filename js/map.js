@@ -322,7 +322,7 @@
         query['obs_date__le'] = end;
         query['obs_date__ge'] = start;
         if (geojson){
-            query['geom__within'] = JSON.stringify(geojson);
+            query['location_geom__within'] = JSON.stringify(geojson);
         }
         query['agg'] = $('#time-agg-filter').val();
         if(valid){
