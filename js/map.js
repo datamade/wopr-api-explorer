@@ -241,6 +241,28 @@
             });
         }
     });
+    var AboutView = Backbone.View.extend({
+        initialize: function(){
+            this.render();
+        },
+        render: function(){
+            this.$el.empty();
+            this.$el.spin('large');
+            var self = this;
+            $.when(this.get_datasets()).then(
+                function(resp){
+                    self.$el.spin(false);
+                    self.$el.html(template_cache('aboutTemplate', {datasets:resp}))
+                }
+            )
+        },
+        get_datasets: function(){
+            return $.ajax({
+                url: endpoint + '/api/',
+                dataType: 'json'
+            })
+        }
+    })
     function parseParams(query){
         var re = /([^&=]+)=?([^&]*)/g;
         var decodeRE = /\+/g;  // Regex for replacing addition symbol with a space
@@ -258,6 +280,7 @@
     }
     $(document).ready(function(){
         resp = new ResponseView({el: '#response'});
+        about = new AboutView({el: '#about'});
         resize_page();
         window.onresize = function(event){
             resize_page();

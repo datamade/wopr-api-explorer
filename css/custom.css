@@ -180,7 +180,7 @@ body {
 }
 
 /* Response */
-#response {
+#response, #about {
   min-height: 50px;
 }
 
