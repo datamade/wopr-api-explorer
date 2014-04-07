@@ -289,7 +289,7 @@
         $('#start-date-filter').attr('placeholder', then.format('MM/DD/YYYY'));
         $('#end-date-filter').attr('placeholder', moment().format('MM/DD/YYYY'));
         map = L.map('map').setView([41.880517,-87.644061], 11);
-        L.tileLayer('https://{s}.tiles.mapbox.com/v3/derekeder.hehblhbj/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.tiles.mapbox.com/v3/datamade.hn83a654/{z}/{x}/{y}.png', {
           attribution: '<a href="http://www.mapbox.com/about/maps/" target="_blank">Terms &amp; Feedback</a>'
         }).addTo(map);
         map.addLayer(drawnItems);
