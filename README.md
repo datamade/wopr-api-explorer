@@ -6,7 +6,7 @@ Front-end interface for the [W.O.P.R. API](https://github.com/datamade/wopr-api)
 
 ``` bash
 git clone git@github.com:datamade/wopr-api-explorer.git
-cd wopr-map
+cd wopr-api-explorer
 
 # to run locally
 python -m SimpleHTTPServer
@@ -30,14 +30,14 @@ We used the following open source tools:
 
 ## Team
 
-* Derek Eder - developer, content
-* Eric van Zanten - developer, GIS data merging
-* Forest Gregg - process design, content
+* Derek Eder
+* Eric van Zanten
+* Forest Gregg
 
 ## Errors / Bugs
 
 If something is not behaving intuitively, it is a bug, and should be reported.
-Report it here: https://github.com/datamade/wopr-map/issues
+Report it here: https://github.com/datamade/wopr-api-explorer/issues
 
 ## Note on Patches/Pull Requests
  
@@ -48,4 +48,4 @@ Report it here: https://github.com/datamade/wopr-map/issues
 
 ## Copyright
 
-Copyright (c) 2014 DataMade and the University of Chicago. Released under the [MIT License](https://github.com/datamade/wopr-map/blob/master/LICENSE).
+Copyright (c) 2014 DataMade and the University of Chicago. Released under the [MIT License](https://github.com/datamade/wopr-api-explorer/blob/master/LICENSE).
