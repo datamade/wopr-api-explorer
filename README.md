@@ -23,7 +23,9 @@ We used the following open source tools:
 
 * [WOPR API](http://wopr.datamade.us/) - API for geospatial and time aggregation across multiple Chicago open datasets
 * [Bootstrap](http://getbootstrap.com/) - Responsive HTML, CSS and Javascript framework
+* [Backbone.js](http://backbonejs.org/) - MVC framework for Javascript
 * [Leaflet](http://leafletjs.com/) - javascript library interactive maps
+* [Leaflet draw](https://github.com/Leaflet/Leaflet.draw) - Vector drawing and editing plugin for Leaflet
 * [jQuery Address](https://github.com/asual/jquery-address) - javascript library creating RESTful URLs
 
 ## Team
