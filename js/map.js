@@ -1,5 +1,4 @@
 (function(){
-    var drawnItems = new L.FeatureGroup();
     var map;
     var geojson = null;
     var results = null;
@@ -262,7 +261,23 @@
                 dataType: 'json'
             })
         }
-    })
+    });
+
+    var AppRouter = Backbone.Router.extend({
+        routes: {
+            "aggregate/:query": "aggregate",
+            "detail/:query": "detail"
+        },
+        aggregate: function(query){
+            console.log(query)
+        },
+        detail: function(query){
+            console.log(query)
+        }
+    });
+
+    var router = new AppRouter();
+
     function parseParams(query){
         var re = /([^&=]+)=?([^&]*)/g;
         var decodeRE = /\+/g;  // Regex for replacing addition symbol with a space
@@ -278,113 +293,125 @@
         }
         return params;
     }
-    $(document).ready(function(){
-        resp = new ResponseView({el: '#response'});
-        about = new AboutView({el: '#about'});
-        resize_page();
-        window.onresize = function(event){
-            resize_page();
-        }
-        var then = moment().subtract('d', 180)
-        $('#start-date-filter').attr('placeholder', then.format('MM/DD/YYYY'));
-        $('#end-date-filter').attr('placeholder', moment().format('MM/DD/YYYY'));
-        map = L.map('map').setView([41.880517,-87.644061], 11);
-        L.tileLayer('https://{s}.tiles.mapbox.com/v3/datamade.hn83a654/{z}/{x}/{y}.png', {
-          attribution: '<a href="http://www.mapbox.com/about/maps/" target="_blank">Terms &amp; Feedback</a>'
-        }).addTo(map);
-        map.addLayer(drawnItems);
-        var drawControl = new L.Control.Draw({
-            edit: {
-                    featureGroup: drawnItems
-            },
-            draw: {
-                polyline: false,
-                circle: false,
-                marker: false
+
+    var MapView = Backbone.View.extend({
+        events: {
+            'click #submit-query': 'submitForm',
+            'click #reset': 'resetForm',
+        },
+        initialize: function(){
+            this.resp = new ResponseView({el: '#response'});
+            this.about = new AboutView({el: '#about'});
+            this.drawnItems = new L.FeatureGroup();
+            this.render();
+        },
+        render: function(){
+            var then = moment().subtract('d', 180).format('MM/DD/YYYY');
+            var now = moment().format('MM/DD/YYYY');
+            this.$el.html(template_cache('mapTemplate', {end: then, start:now}));
+            this.map = L.map('map').setView([41.880517,-87.644061], 11);
+            L.tileLayer('https://{s}.tiles.mapbox.com/v3/derekeder.hehblhbj/{z}/{x}/{y}.png', {
+              attribution: '<a href="http://www.mapbox.com/about/maps/" target="_blank">Terms &amp; Feedback</a>'
+            }).addTo(this.map);
+            this.map.addLayer(this.drawnItems);
+            var self = this;
+            var drawControl = new L.Control.Draw({
+                edit: {
+                        featureGroup: self.drawnItems
+                },
+                draw: {
+                    polyline: false,
+                    circle: false,
+                    marker: false
+                }
+            });
+            this.map.addControl(drawControl);
+            this.map.on('draw:created', this.drawCreate);
+            this.map.on('draw:drawstart', this.drawDelete);
+            this.map.on('draw:edited', this.drawEdit);
+            this.map.on('draw:deleted', this.drawDelete);
+            $('.date-filter').datepicker({
+                dayNamesMin: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+                prevText: '',
+                nextText: ''
+            });
+        },
+        resetForm: function(e){
+            window.location.reload();
+        },
+        drawCreate: function(e){
+            this.drawnItems.clearLayers();
+            this.editCreate(e.layer, e.target);
+        },
+        drawDelete: function(e){
+            this.drawnItems.clearLayers();
+        },
+        drawEdit: function(e){
+            var layers = e.layers;
+            this.drawnItems.clearLayers();
+            var self = this;
+            layers.eachLayer(function(layer){
+                self.editCreate(layer, e.target);
+            });
+        },
+        editCreate: function(layer){
+            geojson = layer.toGeoJSON();
+            this.drawnItems.addLayer(layer);
+        },
+        submitForm: function(e){
+            var message = null;
+            var query = {};
+            var start = $('#start-date-filter').val();
+            var end = $('#end-date-filter').val();
+            start = moment(start);
+            if (!start){
+                start = moment().subtract('days', 180);
             }
-        });
-        map.addControl(drawControl);
-        map.on('draw:created', draw_create);
-        map.on('draw:drawstart', draw_delete);
-        map.on('draw:edited', draw_edit);
-        map.on('draw:deleted', draw_delete);
-        $('.date-filter').datepicker({
-            dayNamesMin: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-            prevText: '',
-            nextText: ''
-        });
-        $('#submit-query').on('click', submit_form);
-        $('#reset').click(function() {
-            location.reload();
-        });
+            end = moment(end)
+            if(!end){
+                end = moment();
+            }
+            var valid = true;
+            if (start.isValid() && end.isValid()){
+                start = start.startOf('day').format('YYYY/MM/DD');
+                end = end.endOf('day').format('YYYY/MM/DD');
+            } else {
+                valid = false;
+                message = 'Your dates are not entered correctly';
+            }
+            query['obs_date__le'] = end;
+            query['obs_date__ge'] = start;
+            if (geojson){
+                query['location_geom__within'] = JSON.stringify(geojson);
+            }
+            query['agg'] = $('#time-agg-filter').val();
+            if(valid){
+                $('#refine').empty();
+                this.resp.undelegateEvents();
+                this.resp.delegateEvents();
+                this.resp.attributes = {query: query};
+                this.resp.render();
+                var route = "aggregate/" + $.param(query);
+                router.navigate(route);
+            } else {
+                $('#response').spin(false);
+                var error = {
+                    header: 'Woops!',
+                    body: message,
+                }
+                var errortpl = new EJS({url: 'js/templates/modalTemplate.ejs'})
+                $('#errorModal').html(errortpl.render(error));
+                $('#errorModal').modal();
+            }
+        }
+    })
+
+    $(document).ready(function(){
+        var map = new MapView({el: '#map-view'})
+        Backbone.history.start();
     });
 
-    function submit_form(e){
-        var message = null;
-        var query = {};
-        var start = $('#start-date-filter').val();
-        var end = $('#end-date-filter').val();
-        start = moment(start);
-        if (!start){
-            start = moment().subtract('days', 180);
-        }
-        end = moment(end)
-        if(!end){
-            end = moment();
-        }
-        var valid = true;
-        if (start.isValid() && end.isValid()){
-            start = start.startOf('day').format('YYYY/MM/DD');
-            end = end.endOf('day').format('YYYY/MM/DD');
-        } else {
-            valid = false;
-            message = 'Your dates are not entered correctly';
-        }
-        query['obs_date__le'] = end;
-        query['obs_date__ge'] = start;
-        if (geojson){
-            query['location_geom__within'] = JSON.stringify(geojson);
-        }
-        query['agg'] = $('#time-agg-filter').val();
-        if(valid){
-            $('#refine').empty();
-            resp.undelegateEvents();
-            resp.delegateEvents();
-            resp.attributes = {query: query};
-            resp.render();
-        } else {
-            $('#response').spin(false);
-            var error = {
-                header: 'Woops!',
-                body: message,
-            }
-            var errortpl = new EJS({url: 'js/templates/modalTemplate.ejs'})
-            $('#errorModal').html(errortpl.render(error));
-            $('#errorModal').modal();
-        }
-    }
 
-    function draw_create(e){
-        drawnItems.clearLayers();
-        edit_create(e.layer, e.target);
-    }
-
-    function draw_edit(e){
-        var layers = e.layers;
-        drawnItems.clearLayers();
-        layers.eachLayer(function(layer){
-            edit_create(layer, e.target);
-        });
-    }
-
-    function draw_delete(e){
-        drawnItems.clearLayers();
-    }
-
-    function edit_create(layer, map){
-        geojson = layer.toGeoJSON();
-        drawnItems.addLayer(layer);
-    }
     function resize_page(){
         $('.half-height').height((window.innerHeight  / 2) - 40);
     }
