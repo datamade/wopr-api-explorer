@@ -188,7 +188,30 @@
             this.$el.empty();
             this.charts = {};
             this.$el.spin('large');
-            $.when(this.getResults()).then(function(resp){
+            //if (!this.attributes.explore){
+            this.getResults();
+            //}
+        },
+        exploreDataset: function(e){
+            var self = this;
+            this.query['dataset_name'] = $(e.target).attr('id').split('-')[0];
+            this.query['datatype'] = 'json';
+            $.each(this.charts, function(key,chart){
+                if (key != self.query.dataset_name){
+                    chart.remove();
+                }
+            });
+            this.explore.attributes = {
+                base_query: this.query,
+                parent: this
+            }
+            this.$el.after(this.explore.render().el);
+            var route = "detail/" + $.param(this.query);
+            router.navigate(route);
+        },
+        getResults: function(){
+            var self = this;
+            $.when(this.resultsFetcher()).then(function(resp){
                 self.$el.spin(false);
                 results = resp.objects;
                 $.each(results, function(i, obj){
@@ -216,22 +239,7 @@
                 new ErrorView({el: '#errorModal', model: resp});
             });
         },
-        exploreDataset: function(e){
-            var self = this;
-            this.query['dataset_name'] = $(e.target).attr('id').split('-')[0];
-            this.query['datatype'] = 'json';
-            $.each(this.charts, function(key,chart){
-                if (key != self.query.dataset_name){
-                    chart.remove();
-                }
-            });
-            this.explore.attributes = {
-                base_query: this.attributes.query,
-                parent: this
-            }
-            this.$el.after(this.explore.render().el);
-        },
-        getResults: function(){
+        resultsFetcher: function(){
             var self = this;
             return $.ajax({
                 url: endpoint + '/api/master/',
@@ -263,52 +271,20 @@
         }
     });
 
-    var AppRouter = Backbone.Router.extend({
-        routes: {
-            "aggregate/:query": "aggregate",
-            "detail/:query": "detail"
-        },
-        aggregate: function(query){
-            console.log(query)
-        },
-        detail: function(query){
-            console.log(query)
-        }
-    });
-
-    var router = new AppRouter();
-
-    function parseParams(query){
-        var re = /([^&=]+)=?([^&]*)/g;
-        var decodeRE = /\+/g;  // Regex for replacing addition symbol with a space
-        var decode = function (str) {return decodeURIComponent( str.replace(decodeRE, " ") );};
-        var params = {}, e;
-        while ( e = re.exec(query) ) {
-            var k = decode( e[1] ), v = decode( e[2] );
-            if (k.substring(k.length - 2) === '[]') {
-                k = k.substring(0, k.length - 2);
-                (params[k] || (params[k] = [])).push(v);
-            }
-            else params[k] = v;
-        }
-        return params;
-    }
-
     var MapView = Backbone.View.extend({
         events: {
             'click #submit-query': 'submitForm',
             'click #reset': 'resetForm',
         },
         initialize: function(){
-            this.resp = new ResponseView({el: '#response'});
-            this.about = new AboutView({el: '#about'});
             this.drawnItems = new L.FeatureGroup();
+            this.resp = this.attributes.resp;
             this.render();
         },
         render: function(){
             var then = moment().subtract('d', 180).format('MM/DD/YYYY');
             var now = moment().format('MM/DD/YYYY');
-            this.$el.html(template_cache('mapTemplate', {end: then, start:now}));
+            this.$el.html(template_cache('mapTemplate', {end: now, start: then}));
             this.map = L.map('map').setView([41.880517,-87.644061], 11);
             L.tileLayer('https://{s}.tiles.mapbox.com/v3/derekeder.hehblhbj/{z}/{x}/{y}.png', {
               attribution: '<a href="http://www.mapbox.com/about/maps/" target="_blank">Terms &amp; Feedback</a>'
@@ -404,16 +380,59 @@
                 $('#errorModal').modal();
             }
         }
-    })
-
-    $(document).ready(function(){
-        var map = new MapView({el: '#map-view'})
-        Backbone.history.start();
     });
 
+    var AppRouter = Backbone.Router.extend({
+        routes: {
+            "": "defaultRoute",
+            "aggregate/:query": "aggregate",
+            "detail/:query": "detail"
+        },
+        defaultRoute: function(){
+            var resp = new ResponseView({el: '#response'});
+            var about = new AboutView({el: '#about'});
+            var map = new MapView({el: '#map-view', attributes: {resp: resp}})
+        },
+        aggregate: function(query){
+            var q = parseParams(query);
+            var resp = new ResponseView({el: '#response', attributes: {query: q}});
+            resp.render();
+            var map = new MapView({el: '#map-view', attributes: {resp: resp}});
+        },
+        detail: function(query){
+            var q = parseParams(query);
+            var resp = new ResponseView({el: '#response', attributes: {query: q}});
+            resp.render()
+            resp.explore.attributes = {
+                base_query: q,
+                parent: resp
+            }
+            resp.$el.after(resp.explore.render().el);
+            var map = new MapView({el: '#map-view', attributes: {resp: resp}});
+        }
+    });
 
     function resize_page(){
         $('.half-height').height((window.innerHeight  / 2) - 40);
     }
+
+    function parseParams(query){
+        var re = /([^&=]+)=?([^&]*)/g;
+        var decodeRE = /\+/g;  // Regex for replacing addition symbol with a space
+        var decode = function (str) {return decodeURIComponent( str.replace(decodeRE, " ") );};
+        var params = {}, e;
+        while ( e = re.exec(query) ) {
+            var k = decode( e[1] ), v = decode( e[2] );
+            if (k.substring(k.length - 2) === '[]') {
+                k = k.substring(0, k.length - 2);
+                (params[k] || (params[k] = [])).push(v);
+            }
+            else params[k] = v;
+        }
+        return params;
+    }
+
+    var router = new AppRouter();
+    Backbone.history.start();
 
 })()
