@@ -5,7 +5,7 @@ Front-end interface for the [W.O.P.R. API](https://github.com/datamade/wopr-api)
 ## Running locally
 
 ``` bash
-git clone git@github.com:datamade/wopr-map.git
+git clone git@github.com:datamade/wopr-api-explorer.git
 cd wopr-map
 
 # to run locally
