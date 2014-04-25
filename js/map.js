@@ -274,14 +274,10 @@
     var MapView = Backbone.View.extend({
         events: {
             'click #submit-query': 'submitForm',
-            'click #reset': 'resetForm',
+            'click #reset': 'resetForm'
         },
         initialize: function(){
-            this.drawnItems = new L.FeatureGroup();
             this.resp = this.attributes.resp;
-            this.render();
-        },
-        render: function(){
             var then = moment().subtract('d', 180).format('MM/DD/YYYY');
             var now = moment().format('MM/DD/YYYY');
             this.$el.html(template_cache('mapTemplate', {end: now, start: then}));
@@ -289,11 +285,15 @@
             L.tileLayer('https://{s}.tiles.mapbox.com/v3/derekeder.hehblhbj/{z}/{x}/{y}.png', {
               attribution: '<a href="http://www.mapbox.com/about/maps/" target="_blank">Terms &amp; Feedback</a>'
             }).addTo(this.map);
-            this.map.addLayer(this.drawnItems);
+            this.map.drawnItems = new L.FeatureGroup();
+            this.map.addLayer(this.map.drawnItems);
+            this.render();
+        },
+        render: function(){
             var self = this;
             var drawControl = new L.Control.Draw({
                 edit: {
-                        featureGroup: self.drawnItems
+                    featureGroup: self.map.drawnItems
                 },
                 draw: {
                     polyline: false,
@@ -311,13 +311,22 @@
                 prevText: '',
                 nextText: ''
             });
+            if (typeof this.attributes.dataLayer !== 'undefined'){
+                this.map.drawnItems.addLayer(
+                    L.geoJson(this.attributes.dataLayer, {
+                        color: "#f06eaa",
+                        fillColor: "#f06eaa",
+                        weight: 4
+                }));
+            }
         },
         resetForm: function(e){
             window.location.reload();
         },
         drawCreate: function(e){
             this.drawnItems.clearLayers();
-            this.editCreate(e.layer, e.target);
+            this.drawnItems.addLayer(e.layer);
+            this.dataLayer = e.layer.toGeoJSON();
         },
         drawDelete: function(e){
             this.drawnItems.clearLayers();
@@ -327,12 +336,9 @@
             this.drawnItems.clearLayers();
             var self = this;
             layers.eachLayer(function(layer){
-                self.editCreate(layer, e.target);
+                self.dataLayer = layer.toGeoJSON();
+                self.drawnItems.addLayer(layer);
             });
-        },
-        editCreate: function(layer){
-            geojson = layer.toGeoJSON();
-            this.drawnItems.addLayer(layer);
         },
         submitForm: function(e){
             var message = null;
@@ -357,8 +363,8 @@
             }
             query['obs_date__le'] = end;
             query['obs_date__ge'] = start;
-            if (geojson){
-                query['location_geom__within'] = JSON.stringify(geojson);
+            if (this.map.dataLayer){
+                query['location_geom__within'] = JSON.stringify(this.map.dataLayer);
             }
             query['agg'] = $('#time-agg-filter').val();
             if(valid){
@@ -397,7 +403,11 @@
             var q = parseParams(query);
             var resp = new ResponseView({el: '#response', attributes: {query: q}});
             resp.render();
-            var map = new MapView({el: '#map-view', attributes: {resp: resp}});
+            var attrs = {resp:resp}
+            if (typeof q['location_geom__within'] !== 'undefined'){
+                attrs['dataLayer'] = $.parseJSON(q['location_geom__within']);
+            }
+            var map = new MapView({el: '#map-view', attributes: attrs});
         },
         detail: function(query){
             var q = parseParams(query);
